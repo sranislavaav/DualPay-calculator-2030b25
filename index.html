@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DualPay - Валутен Калкулатор</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Основни настройки */
+        body {
+            font-family: 'Montserrat', sans-serif;
+            overflow: hidden; /* Заради динамичния фон */
+            background-color: #f0f9ff; /* Много светло синьо */
+        }
+
+        h1, h2, h3, .brand-font {
+            font-family: 'Comfortaa', cursive;
+        }
+
+        /* Динамичен фон */
+        #dynamic-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            grid-auto-rows: 60px;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .bg-symbol {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #0f172a; /* Морско синьо */
+            opacity: 0.03; /* Почти незабележимо */
+            animation: floatAnim 6s ease-in-out infinite;
+        }
+
+        @keyframes floatAnim {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            50% { transform: translate(5px, -5px) rotate(3deg) scale(1.05); }
+            100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+        }
+
+        /* Glassmorphism Карта */
+        .glass-card {
+            background: rgba(224, 242, 254, 0.85); /* Пастелно небесно синьо с прозрачност */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 10px 40px -10px rgba(15, 23, 42, 0.2);
+        }
+
+        /* Премахване на стрелките на input type number */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+            -webkit-appearance: none; 
+            margin: 0; 
+        }
+
+        /* Анимации за резултата */
+        .fade-slide-up {
+            animation: fadeSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Custom Toggle */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #2dd4bf;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #0f172a;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col items-center justify-center relative text-slate-800">
+
+    <div id="dynamic-bg"></div>
+
+    <main class="w-full max-w-md h-full sm:h-auto sm:rounded-3xl glass-card flex flex-col relative overflow-hidden transition-all duration-300">
+        
+        <header class="pt-8 pb-4 px-6 flex flex-col items-center justify-center">
+            <div class="w-20 h-20 bg-gradient-to-br from-[#0f172a] to-[#2dd4bf] rounded-2xl flex items-center justify-center shadow-lg mb-3">
+                <span class="text-white text-2xl brand-font font-bold">€⇄лв</span>
+            </div>
+            <h1 class="text-2xl font-bold text-[#0f172a]">DualPay</h1>
+        </header>
+
+        <div class="flex-1 px-6 pb-6 flex flex-col gap-5 overflow-y-auto">
+            
+            <div class="bg-blue-50/80 p-4 rounded-xl border border-blue-100 shadow-sm">
+                <label class="block text-sm font-bold text-slate-500 mb-1 ml-1 uppercase">Сума за плащане</label>
+                <div class="flex items-center gap-3">
+                    <input type="number" id="inputTotal" placeholder="0.00" inputmode="decimal" 
+                        class="w-full bg-white text-[#0f172a] text-3xl font-bold p-3 rounded-lg border border-transparent focus:border-[#2dd4bf] focus:ring-2 focus:ring-[#2dd4bf]/20 outline-none transition-all placeholder-slate-300">
+                    
+                    <div class="flex flex-col bg-white rounded-lg p-1 shadow-sm border border-slate-100">
+                        <button id="btnTotalBGN" class="px-3 py-1 rounded text-xs font-bold bg-[#0f172a] text-white transition-all">BGN</button>
+                        <button id="btnTotalEUR" class="px-3 py-1 rounded text-xs font-bold text-slate-400 hover:text-[#0f172a] transition-all">EUR</button>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-slate-200/60">
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">ПЛАТЕНО В ЛВ</label>
+                    <div class="relative">
+                        <input type="number" id="paidBGN" placeholder="0" inputmode="decimal"
+                            class="w-full bg-white text-slate-700 text-xl font-semibold p-3 pr-8 rounded-lg border border-slate-200 focus:border-[#2dd4bf] focus:ring-2 focus:ring-[#2dd4bf]/20 outline-none transition-all">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">BGN</span>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1 ml-1">ПЛАТЕНО В €</label>
+                    <div class="relative">
+                        <input type="number" id="paidEUR" placeholder="0" inputmode="decimal"
+                            class="w-full bg-white text-slate-700 text-xl font-semibold p-3 pr-8 rounded-lg border border-slate-200 focus:border-[#2dd4bf] focus:ring-2 focus:ring-[#2dd4bf]/20 outline-none transition-all">
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs font-bold">EUR</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="errorBox" class="hidden bg-red-50 text-red-600 text-sm font-bold p-3 rounded-lg border border-red-100 flex items-center justify-center text-center">
+                Недостатъчна сума!
+            </div>
+
+            <div id="resultBox" class="hidden fade-slide-up mt-auto bg-[#0f172a] rounded-2xl p-5 text-white shadow-xl relative overflow-hidden group">
+                <div class="absolute -top-10 -right-10 w-24 h-24 bg-[#2dd4bf] rounded-full blur-3xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                
+                <div class="flex justify-between items-start mb-2 relative z-10">
+                    <span class="text-sm font-bold text-slate-300 uppercase tracking-wide">Ресто</span>
+                    
+                    <div class="flex bg-slate-700/50 rounded-lg p-0.5">
+                        <button id="resModeBGN" class="px-3 py-1 rounded-md text-xs font-bold bg-[#2dd4bf] text-[#0f172a] shadow-sm transition-all">BGN</button>
+                        <button id="resModeEUR" class="px-3 py-1 rounded-md text-xs font-bold text-slate-300 hover:text-white transition-all">EUR</button>
+                    </div>
+                </div>
+
+                <div class="text-center py-2 relative z-10">
+                    <div id="changeMain" class="text-5xl font-bold brand-font tracking-tight">0.00 <span class="text-2xl">лв</span></div>
+                    <div id="changeSec" class="text-sm text-[#2dd4bf] mt-1 font-semibold opacity-80">≈ 0.00 €</div>
+                </div>
+            </div>
+            
+            <div class="h-4 sm:hidden"></div>
+        </div>
+
+        <footer class="bg-white/40 backdrop-blur-md border-t border-white/50 p-3 text-center">
+            <p class="text-[10px] text-slate-500 font-semibold mb-1">
+                КУРС: 1 EUR = <span class="font-bold text-slate-700">1.95583</span> BGN
+            </p>
+            <p class="text-[10px] text-slate-400">
+                © Станислава Вранкова
+            </p>
+        </footer>
+    </main>
+
+    <script>
+        /**
+         * PWA & System Logic
+         */
+        const RATE = 1.95583;
+
+        // Елементи
+        const els = {
+            inputTotal: document.getElementById('inputTotal'),
+            btnTotalBGN: document.getElementById('btnTotalBGN'),
+            btnTotalEUR: document.getElementById('btnTotalEUR'),
+            paidBGN: document.getElementById('paidBGN'),
+            paidEUR: document.getElementById('paidEUR'),
+            errorBox: document.getElementById('errorBox'),
+            resultBox: document.getElementById('resultBox'),
+            resModeBGN: document.getElementById('resModeBGN'),
+            resModeEUR: document.getElementById('resModeEUR'),
+            changeMain: document.getElementById('changeMain'),
+            changeSec: document.getElementById('changeSec'),
+            bg: document.getElementById('dynamic-bg')
+        };
+
+        // State
+        let state = {
+            totalDue: 0,
+            totalCurrency: 'BGN', // 'BGN' or 'EUR'
+            paidBGN: 0,
+            paidEUR: 0,
+            resultMode: 'BGN' // 'BGN' or 'EUR'
+        };
+
+        // --- 1. Генериране на фон ---
+        function generateBackground() {
+            const cols = Math.ceil(window.innerWidth / 60);
+            const rows = Math.ceil(window.innerHeight / 60);
+            const total = cols * rows;
+            
+            els.bg.innerHTML = '';
+            
+            for (let i = 0; i < total; i++) {
+                const span = document.createElement('span');
+                span.classList.add('bg-symbol');
+                // Шахматна логика: (ред + колона) % 2 == 0
+                const row = Math.floor(i / cols);
+                const col = i % cols;
+                span.innerText = (row + col) % 2 === 0 ? '€' : 'лв';
+                
+                // Рандомизиране на анимацията за по-органичен вид
+                span.style.animationDelay = `-${Math.random() * 5}s`;
+                els.bg.appendChild(span);
+            }
+        }
+        
+        window.addEventListener('resize', generateBackground);
+        generateBackground();
+
+        // --- 2. Логика на калкулатора ---
+
+        function updateState() {
+            state.totalDue = parseFloat(els.inputTotal.value) || 0;
+            state.paidBGN = parseFloat(els.paidBGN.value) || 0;
+            state.paidEUR = parseFloat(els.paidEUR.value) || 0;
+            calculate();
+        }
+
+        function calculate() {
+            if (state.totalDue === 0 && state.paidBGN === 0 && state.paidEUR === 0) {
+                els.resultBox.classList.add('hidden');
+                els.errorBox.classList.add('hidden');
+                return;
+            }
+
+            // Конвертиране на всичко към BGN за изчисление
+            let dueInBGN = state.totalCurrency === 'BGN' ? state.totalDue : (state.totalDue * RATE);
+            let paidTotalInBGN = state.paidBGN + (state.paidEUR * RATE);
+
+            let changeInBGN = paidTotalInBGN - dueInBGN;
+
+            // Обработка на грешки (закръгляне до 2 знак за сравнение заради floating point issues)
+            if (parseFloat(changeInBGN.toFixed(2)) < 0) {
+                els.errorBox.classList.remove('hidden');
+                els.resultBox.classList.add('hidden');
+                return;
+            } else {
+                els.errorBox.classList.add('hidden');
+                els.resultBox.classList.remove('hidden');
+            }
+
+            // Визуализация
+            renderResult(changeInBGN);
+        }
+
+        function renderResult(changeBGN) {
+            let mainVal, mainSym, secVal, secSym;
+            let changeEUR = changeBGN / RATE;
+
+            if (state.resultMode === 'BGN') {
+                mainVal = changeBGN.toFixed(2);
+                mainSym = 'лв';
+                secVal = changeEUR.toFixed(2);
+                secSym = '€';
+            } else {
+                mainVal = changeEUR.toFixed(2);
+                mainSym = '€';
+                secVal = changeBGN.toFixed(2);
+                secSym = 'лв';
+            }
+
+            els.changeMain.innerHTML = `${mainVal} <span class="text-2xl">${mainSym}</span>`;
+            els.changeSec.innerHTML = `≈ ${secVal} ${secSym}`;
+        }
+
+        // --- Event Listeners ---
+
+        // Input events
+        [els.inputTotal, els.paidBGN, els.paidEUR].forEach(input => {
+            input.addEventListener('input', updateState);
+        });
+
+        // Currency Toggle (Total)
+        els.btnTotalBGN.addEventListener('click', () => {
+            state.totalCurrency = 'BGN';
+            els.btnTotalBGN.className = "px-3 py-1 rounded text-xs font-bold bg-[#0f172a] text-white transition-all";
+            els.btnTotalEUR.className = "px-3 py-1 rounded text-xs font-bold text-slate-400 hover:text-[#0f172a] transition-all";
+            updateState();
+        });
+
+        els.btnTotalEUR.addEventListener('click', () => {
+            state.totalCurrency = 'EUR';
+            els.btnTotalEUR.className = "px-3 py-1 rounded text-xs font-bold bg-[#0f172a] text-white transition-all";
+            els.btnTotalBGN.className = "px-3 py-1 rounded text-xs font-bold text-slate-400 hover:text-[#0f172a] transition-all";
+            updateState();
+        });
+
+        // Result Mode Toggle
+        els.resModeBGN.addEventListener('click', () => {
+            state.resultMode = 'BGN';
+            els.resModeBGN.className = "px-3 py-1 rounded-md text-xs font-bold bg-[#2dd4bf] text-[#0f172a] shadow-sm transition-all";
+            els.resModeEUR.className = "px-3 py-1 rounded-md text-xs font-bold text-slate-300 hover:text-white transition-all";
+            calculate();
+        });
+
+        els.resModeEUR.addEventListener('click', () => {
+            state.resultMode = 'EUR';
+            els.resModeEUR.className = "px-3 py-1 rounded-md text-xs font-bold bg-[#2dd4bf] text-[#0f172a] shadow-sm transition-all";
+            els.resModeBGN.className = "px-3 py-1 rounded-md text-xs font-bold text-slate-300 hover:text-white transition-all";
+            calculate();
+        });
+
+        // --- 3. PWA Setup (Dynamic Manifest & Icon) ---
+        
+        // Генериране на икона
+        function setupIcons() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+
+            // Фон (Градиент)
+            const grd = ctx.createLinearGradient(0, 0, 512, 512);
+            grd.addColorStop(0, "#0f172a");
+            grd.addColorStop(1, "#2dd4bf");
+            
+            // Заоблен квадрат
+            ctx.fillStyle = grd;
+            ctx.beginPath();
+            ctx.roundRect(0, 0, 512, 512, 100);
+            ctx.fill();
+
+            // Текст
+            ctx.fillStyle = "white";
+            ctx.font = "bold 130px Comfortaa";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("€ ⇄ лв", 256, 256);
+
+            const iconUrl = canvas.toDataURL('image/png');
+            
+            // Задаване на favicon
+            let link = document.querySelector("link[rel~='icon']");
+            if (!link) {
+                link = document.createElement('link');
+                link.rel = 'icon';
+                document.head.appendChild(link);
+            }
+            link.href = iconUrl;
+
+            // Apple Touch Icon
+            let appleLink = document.querySelector("link[rel~='apple-touch-icon']");
+            if (!appleLink) {
+                appleLink = document.createElement('link');
+                appleLink.rel = 'apple-touch-icon';
+                document.head.appendChild(appleLink);
+            }
+            appleLink.href = iconUrl;
+
+            return iconUrl;
+        }
+
+        const iconUrl = setupIcons();
+
+        // Генериране на Manifest
+        const manifest = {
+            "name": "DualPay Currency Calc",
+            "short_name": "DualPay",
+            "start_url": ".",
+            "display": "standalone",
+            "background_color": "#e0f2fe",
+            "theme_color": "#0f172a",
+            "icons": [
+                {
+                    "src": iconUrl,
+                    "sizes": "512x512",
+                    "type": "image/png"
+                }
+            ]
+        };
+
+        const stringManifest = JSON.stringify(manifest);
+        const blob = new Blob([stringManifest], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(blob);
+        
+        const manifestLink = document.createElement('link');
+        manifestLink.rel = 'manifest';
+        manifestLink.href = manifestURL;
+        document.head.appendChild(manifestLink);
+
+        // Service Worker (Basic Caching)
+        if ('serviceWorker' in navigator) {
+            const swCode = `
+                self.addEventListener('install', (e) => {
+                    e.waitUntil(
+                        caches.open('dualpay-v1').then((cache) => {
+                            return cache.addAll(['./']);
+                        })
+                    );
+                });
+                self.addEventListener('fetch', (e) => {
+                    e.respondWith(
+                        caches.match(e.request).then((response) => {
+                            return response || fetch(e.request);
+                        })
+                    );
+                });
+            `;
+            
+            const swBlob = new Blob([swCode], {type: 'application/javascript'});
+            const swUrl = URL.createObjectURL(swBlob);
+
+            navigator.serviceWorker.register(swUrl)
+                .then(() => console.log('SW Registered'))
+                .catch((err) => console.log('SW Error:', err));
+        }
+
+    </script>
+</body>
+</html>
